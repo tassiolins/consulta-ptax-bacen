@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox
 from datetime import datetime
 
 from tkcalendar import DateEntry
@@ -9,6 +9,7 @@ from matplotlib.ticker import MaxNLocator
 
 from ptax_api import buscar_ptax_hoje, buscar_ptax_periodo
 from database import criar_tabela, salvar_cotacoes
+from exportacao import exportar_excel
 
 
 class PtaxApp:
@@ -24,6 +25,8 @@ class PtaxApp:
         self._configurar_estilo()
         self._criar_widgets()
 
+    # 🔹 método explícito (importante para PyInstaller)
+    def mainloop(self):
         self.root.mainloop()
 
     # ================= ESTILO =================
@@ -48,7 +51,13 @@ class PtaxApp:
 
         ttk.Button(frame_topo, text="Buscar PTAX Hoje", command=self.buscar_hoje).pack(side="left", padx=5)
         ttk.Button(frame_topo, text="Buscar por Período", command=self.buscar_periodo).pack(side="left", padx=5)
-        ttk.Button(frame_topo, text="Exportar Excel", command=self.exportar_excel).pack(side="left", padx=5)
+
+        ttk.Button(
+            frame_topo,
+            text="Exportar Excel",
+            command=lambda: exportar_excel(self.dados_atuais)
+        ).pack(side="left", padx=5)
+
         ttk.Button(frame_topo, text="Limpar Tela", command=self.limpar_tela).pack(side="left", padx=5)
 
         frame_datas = tk.Frame(self.root, bg="#1e1e1e")
@@ -126,11 +135,10 @@ class PtaxApp:
             return
 
         vendas = [d[2] for d in self.dados_atuais]
-        total = len(vendas)
-        media = sum(vendas) / total
+        media = sum(vendas) / len(vendas)
 
         self.lbl_dashboard.config(
-            text=f"Registros: {total} | Média PTAX Venda: {media:.4f}"
+            text=f"Registros: {len(vendas)} | Média PTAX Venda: {media:.4f}"
         )
 
     def atualizar_grafico(self):
@@ -140,13 +148,10 @@ class PtaxApp:
             self.canvas.draw()
             return
 
-        # 🔹 CONVERTE DATAS PARA DATETIME
         datas = [datetime.strptime(d[0], "%Y-%m-%d") for d in self.dados_atuais]
         vendas = [d[2] for d in self.dados_atuais]
 
         self.ax.plot(datas, vendas, color="#00d1ff", linewidth=2)
-
-        # 🔹 MELHORIA VISUAL
         self.ax.xaxis.set_major_locator(MaxNLocator(8))
         self.fig.autofmt_xdate(rotation=45)
 
@@ -155,21 +160,6 @@ class PtaxApp:
         self.ax.grid(True, color="#444444")
 
         self.canvas.draw()
-
-    def exportar_excel(self):
-        if not self.dados_atuais:
-            messagebox.showwarning("Aviso", "Nenhum dado para exportar.")
-            return
-
-        caminho = filedialog.asksaveasfilename(defaultextension=".xlsx")
-        if not caminho:
-            return
-
-        import pandas as pd
-        df = pd.DataFrame(self.dados_atuais, columns=["Data", "Compra", "Venda"])
-        df.to_excel(caminho, index=False)
-
-        messagebox.showinfo("Sucesso", "Arquivo exportado com sucesso!")
 
     def limpar_tela(self):
         self.dados_atuais = []

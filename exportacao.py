@@ -1,16 +1,25 @@
+from tkinter import messagebox, filedialog
 import pandas as pd
-from database import buscar_todas
 
 
-def exportar_excel(caminho):
-    dados = buscar_todas()
-
+def exportar_excel(dados):
     if not dados:
-        raise Exception("Não há dados para exportar.")
+        messagebox.showwarning("Aviso", "Nenhum dado para exportar.")
+        return
 
-    df = pd.DataFrame(
-        dados,
-        columns=["Data", "PTAX Compra", "PTAX Venda"]
-    )
+    try:
+        caminho = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Excel", "*.xlsx")]
+        )
 
-    df.to_excel(caminho, index=False)
+        if not caminho:
+            return
+
+        df = pd.DataFrame(dados, columns=["Data", "Compra", "Venda"])
+        df.to_excel(caminho, index=False)
+
+        messagebox.showinfo("Sucesso", "Arquivo exportado com sucesso!")
+
+    except Exception as e:
+        messagebox.showerror("Erro ao exportar Excel", str(e))
